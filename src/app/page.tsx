@@ -1,103 +1,210 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { CommentForm } from "@/components/CommentForm";
+import { Button } from "@/components/ui/button";
+import { extractCommentId } from "@/lib/utils/youtube";
+import { useCardStore } from "@/lib/store";
 import Image from "next/image";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+interface CommentData {
+    snippet: {
+        textDisplay: string;
+        authorDisplayName: string;
+        authorProfileImageUrl: string;
+        likeCount: number;
+        publishedAt: string;
+    };
+}
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+export default function Home() {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [currentCommentData, setCurrentCommentData] =
+        useState<CommentData | null>(null);
+    const cardOptions = useCardStore((state) => state.cardOptions);
+
+    const generatePreviewUrl = useCallback(
+        (commentData: CommentData) => {
+            const params = new URLSearchParams({
+                data: JSON.stringify(commentData),
+                backgroundColor: cardOptions.backgroundColor,
+                showAuthorImage: cardOptions.showAuthorImage ? "1" : "0",
+                cardRadius: cardOptions.cardRadius.toString(),
+                textColor: cardOptions.textColor,
+                showLikeCount: cardOptions.showLikeCount ? "1" : "0",
+                padding: cardOptions.padding.toString(),
+                verticalAlign: cardOptions.verticalAlign,
+                autoSize: cardOptions.autoSize ? "1" : "0",
+                scale: cardOptions.scale.toString(),
+            });
+
+            if (!cardOptions.autoSize) {
+                params.set("width", cardOptions.width.toString());
+                params.set("height", cardOptions.height.toString());
+            }
+
+            return `/api/comment-youtube?${params.toString()}`;
+        },
+        [cardOptions]
+    );
+
+    useEffect(() => {
+        if (currentCommentData) {
+            const newPreviewUrl = generatePreviewUrl(currentCommentData);
+            setPreviewUrl(newPreviewUrl);
+        }
+    }, [cardOptions, currentCommentData, generatePreviewUrl]);
+
+    const handleSubmit = async (url: string) => {
+        try {
+            setLoading(true);
+            setError(null);
+            setPreviewUrl(null);
+
+            const commentId = extractCommentId(url);
+            if (!commentId) {
+                throw new Error("Please enter a valid YouTube comment URL");
+            }
+
+            // First, fetch the comment data
+            const commentResponse = await fetch(
+                `/api/comment?id=${encodeURIComponent(commentId)}`
+            );
+            if (!commentResponse.ok) {
+                const errorData = await commentResponse.json();
+                throw new Error(errorData.error || "Failed to fetch comment");
+            }
+            const responseData = await commentResponse.json();
+
+            // Extract the actual comment from the response
+            const commentData = responseData.items?.[0];
+            if (!commentData) {
+                throw new Error("No comment found");
+            }
+
+            setCurrentCommentData(commentData);
+            setPreviewUrl(generatePreviewUrl(commentData));
+        } catch (err) {
+            console.error("Error fetching comment:", err);
+            setError(err instanceof Error ? err.message : "An error occurred");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDownload = async () => {
+        if (!previewUrl) return;
+
+        try {
+            const response = await fetch(previewUrl);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "comment-card.png";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            console.error("Error downloading image:", err);
+            setError("Failed to download image");
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex flex-col font-mono">
+            {/* Header */}
+            <header className="w-full border-b">
+                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+                    <div className="flex items-center space-x-3 bg-amber-200 p-2 rounded-lg">
+                        <Image
+                            src="/logo.png"
+                            alt="Cavdar.fr Logo"
+                            width={40}
+                            height={40}
+                            className="rounded-lg"
+                        />
+                        <h1 className="text-xl font-bold">
+                            YouTube Comment Card
+                        </h1>
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
+                <div className="max-w-5xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <CommentForm
+                                onSubmit={handleSubmit}
+                                loading={loading}
+                            />
+                        </div>
+
+                        <div className="relative flex flex-1 flex-col items-center justify-center gap-4 p-4 md:p-8 bg-[url('/pattern.png')] bg-repeat rounded-lg">
+                            {error ? (
+                                <div className="text-red-500 text-center">
+                                    {error}
+                                </div>
+                            ) : previewUrl ? (
+                                <>
+                                    <div className="w-full">
+                                        <div className="text-center mb-4 font-medium">
+                                            Preview
+                                        </div>
+                                        <div className="relative w-full aspect-[3/2]">
+                                            <Image
+                                                src={previewUrl}
+                                                alt="Comment Card Preview"
+                                                className="w-full h-full object-contain"
+                                                width={600}
+                                                height={400}
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={handleDownload}
+                                        className="w-full md:w-auto"
+                                    >
+                                        Download Comment Card
+                                    </Button>
+                                </>
+                            ) : (
+                                <div className="text-gray-500 text-center">
+                                    No comment selected yet.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            {/* Footer */}
+            <footer className="w-full border-t mt-auto">
+                <div className="container mx-auto px-4 py-6">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center space-x-2 bg-amber-200 p-2 rounded-lg">
+                            <Image
+                                src="/logo.png"
+                                alt="Cavdar.fr Logo"
+                                width={24}
+                                height={24}
+                                className="rounded"
+                            />
+                            <span className="text-sm text-gray-600">
+                                Generated by Cavdar.fr
+                            </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                            © {new Date().getFullYear()} Cavdar.fr
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    );
 }
