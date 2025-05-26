@@ -34,9 +34,56 @@ function decodeHtmlEntities(text: string): string {
             quot: '"',
             apos: "'",
             nbsp: " ",
+            hellip: "...",
+            mdash: "\u2014",
+            ndash: "\u2013",
+            rsquo: "\u2019",
+            lsquo: "\u2018",
+            rdquo: "\u201d",
+            ldquo: "\u201c",
         };
         return entities[entity.toLowerCase()] || match;
     });
+}
+
+function processHtmlContent(text: string): string {
+    // First, handle common HTML tags
+    const processed = text
+        // Convert <br> and <br/> tags to line breaks
+        .replace(/<br\s*\/?>/gi, "\n")
+        // Convert <p> tags to line breaks with extra spacing
+        .replace(/<\/p>/gi, "\n\n")
+        .replace(/<p[^>]*>/gi, "")
+        // Handle other block-level elements
+        .replace(/<\/(div|blockquote|h[1-6])>/gi, "\n")
+        .replace(/<(div|blockquote|h[1-6])[^>]*>/gi, "")
+        // Remove other common HTML tags but preserve their content
+        .replace(/<\/?(?:strong|b|em|i|u|span|a|code|pre)[^>]*>/gi, "")
+        // Remove any remaining HTML tags
+        .replace(/<[^>]*>/g, "")
+        // Clean up multiple consecutive newlines (max 2 consecutive)
+        .replace(/\n{3,}/g, "\n\n")
+        // Clean up spaces around newlines
+        .replace(/[ \t]*\n[ \t]*/g, "\n")
+        // Trim whitespace from start and end
+        .trim();
+
+    // Then decode HTML entities
+    return decodeHtmlEntities(processed);
+}
+
+function renderTextWithLineBreaks(text: string) {
+    // Convert newlines to spaces and let CSS handle the display
+    return text.replace(/\n/g, "\n");
+}
+
+function formatDate(dateString: string, format: string): string {
+    const date = new Date(dateString);
+    if (format === "fr") {
+        return date.toLocaleDateString("fr-FR");
+    } else {
+        return date.toLocaleDateString("en-US");
+    }
 }
 
 export async function GET(req: NextRequest) {
@@ -62,6 +109,7 @@ export async function GET(req: NextRequest) {
         const showLikeCount = searchParams.get("showLikeCount") !== "0";
         const baseFontSize = 16; // Base font size
         const basePadding = getNumberParam(searchParams.get("padding"), 20);
+        const dateFormat = searchParams.get("dateFormat") || "us";
         let verticalAlign = searchParams.get("verticalAlign") || "center";
         if (!["start", "center", "end"].includes(verticalAlign)) {
             verticalAlign = "center";
@@ -95,8 +143,11 @@ export async function GET(req: NextRequest) {
             // Estimate header and like count heights
             const headerHeight = (40 + 12) * scale; // avatar + margin
             const likeCountHeight = showLikeCount ? 26 * scale : 0;
+            const processedTextForHeight = processHtmlContent(
+                comment.snippet.textDisplay
+            );
             const textHeight = estimateTextHeight(
-                comment.snippet.textDisplay,
+                processedTextForHeight,
                 finalWidth,
                 fontSize,
                 padding
@@ -124,7 +175,7 @@ export async function GET(req: NextRequest) {
             verticalAlign: verticalAlign as "start" | "center" | "end",
         });
 
-        const decodedText = decodeHtmlEntities(comment.snippet.textDisplay);
+        const decodedText = processHtmlContent(comment.snippet.textDisplay);
 
         return new ImageResponse(
             (
@@ -182,9 +233,10 @@ export async function GET(req: NextRequest) {
                                         fontSize: `${14 * scale}px`,
                                     }}
                                 >
-                                    {new Date(
-                                        comment.snippet.publishedAt
-                                    ).toLocaleDateString()}
+                                    {formatDate(
+                                        comment.snippet.publishedAt,
+                                        dateFormat
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -196,9 +248,10 @@ export async function GET(req: NextRequest) {
                                 color: textColor,
                                 fontWeight: "bold",
                                 textAlign: "left",
+                                whiteSpace: "pre-line",
                             }}
                         >
-                            {decodedText}
+                            {renderTextWithLineBreaks(decodedText)}
                         </div>
                         {showLikeCount && (
                             <div

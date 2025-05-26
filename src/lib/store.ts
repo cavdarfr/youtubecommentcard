@@ -12,6 +12,7 @@ export interface CardOptions {
     backgroundColor: string;
     textColor: string;
     cardRadius: number;
+    dateFormat: string;
 }
 
 interface CardStore {
@@ -32,6 +33,7 @@ export const useCardStore = create<CardStore>((set) => ({
         backgroundColor: "#ffffff",
         textColor: "#000000",
         cardRadius: 8,
+        dateFormat: "us",
     },
     setCardOptions: (options) =>
         set((state) => ({

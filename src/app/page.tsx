@@ -38,6 +38,7 @@ export default function Home() {
                 verticalAlign: cardOptions.verticalAlign,
                 autoSize: cardOptions.autoSize ? "1" : "0",
                 scale: cardOptions.scale.toString(),
+                dateFormat: cardOptions.dateFormat,
             });
 
             if (!cardOptions.autoSize) {

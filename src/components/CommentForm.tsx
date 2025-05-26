@@ -25,6 +25,11 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
         { value: "end", label: "Bottom" },
     ];
 
+    const dateFormatOptions = [
+        { value: "us", label: "US Format (MM/DD/YYYY)" },
+        { value: "fr", label: "French Format (DD/MM/YYYY)" },
+    ];
+
     return (
         <div className="w-full">
             <form className="space-y-4" onSubmit={handleFetchComment}>
@@ -150,6 +155,18 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
                             max="64"
                         />
                     </div>
+
+                    <FormSelect
+                        id="dateFormat"
+                        label="Date Format"
+                        options={dateFormatOptions}
+                        value={cardOptions.dateFormat}
+                        onChange={(e) =>
+                            setCardOptions({
+                                dateFormat: e.target.value,
+                            })
+                        }
+                    />
 
                     <FormCheckbox
                         id="showAuthorImage"
