@@ -36,10 +36,13 @@ export const sharedCardStyle = ({
         padding: `${padding}px`,
         borderRadius: `${borderRadius}px`,
         width: `${width}px`,
+        boxSizing: "border-box", // Ensure padding is included in dimensions
     };
 
     if (height !== undefined) {
-        style.height = `${height}px`;
+        // Use minHeight to allow content expansion while maintaining minimum size
+        style.minHeight = `${height}px`;
+        style.height = "auto"; // Allow expansion beyond minHeight
         // Apply vertical alignment only when height is specified
         switch (verticalAlign) {
             case "start":

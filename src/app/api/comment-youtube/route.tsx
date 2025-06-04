@@ -15,11 +15,29 @@ function estimateTextHeight(
     fontSize: number,
     padding: number
 ) {
-    const avgCharWidth = fontSize * 0.6;
-    const charsPerLine = Math.floor((width - padding * 2) / avgCharWidth);
-    const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
+    // More accurate character width calculation for the font family we're using
+    const avgCharWidth = fontSize * 0.55; // Slightly more accurate for system fonts
+    const availableWidth = width - padding * 2;
+    const charsPerLine = Math.floor(availableWidth / avgCharWidth);
+
+    // Handle line breaks explicitly
+    const lines = text.split("\n");
+    let totalLines = 0;
+
+    for (const line of lines) {
+        if (line.trim().length === 0) {
+            totalLines += 1; // Empty line
+        } else {
+            const linesForThisText = Math.max(
+                1,
+                Math.ceil(line.length / charsPerLine)
+            );
+            totalLines += linesForThisText;
+        }
+    }
+
     const lineHeight = fontSize * 1.5;
-    return lines * lineHeight;
+    return totalLines * lineHeight;
 }
 
 function decodeHtmlEntities(text: string): string {
@@ -102,6 +120,8 @@ export async function GET(req: NextRequest) {
         const autoSize = searchParams.get("autoSize") === "1";
         const baseWidth = getNumberParam(searchParams.get("width"), 600);
         const baseHeight = getNumberParam(searchParams.get("height"), 400);
+        const aspectRatio =
+            getNumberParam(searchParams.get("aspectRatio"), 0) || undefined;
         const backgroundColor = searchParams.get("backgroundColor") || "#fff";
         const showAuthorImage = searchParams.get("showAuthorImage") !== "0";
         const cardRadius = getNumberParam(searchParams.get("cardRadius"), 8);
@@ -114,21 +134,13 @@ export async function GET(req: NextRequest) {
             verticalAlign = "center";
         }
 
-        // Base font sizes
-        const baseFontSizes = {
-            authorName: 16,
-            date: 14,
-            comment: 17,
-            likeCount: 14,
-        };
+        // Apply scale to all size-related properties
+        const width = baseWidth * scale;
+        const height = baseHeight * scale;
 
-        // Apply font size adjustment to all text elements
-        const fontSizes = {
-            authorName: baseFontSizes.authorName + fontSizeAdjustment,
-            date: baseFontSizes.date + fontSizeAdjustment,
-            comment: baseFontSizes.comment + fontSizeAdjustment,
-            likeCount: baseFontSizes.likeCount + fontSizeAdjustment,
-        };
+        const cardRadius = baseCardRadius * scale;
+        const fontSize = baseFontSize * scale;
+        const padding = basePadding * scale;
 
         // Guard: width and height must be valid positive integers if not autoSize
         if (
@@ -148,22 +160,76 @@ export async function GET(req: NextRequest) {
             // Use the provided width or a sensible default/minimum
             finalWidth = Math.max(width, 400);
 
-            // Estimate header and like count heights
-            const headerHeight = 40 + 12; // avatar + margin
-            const likeCountHeight = showLikeCount ? 26 : 0;
+            // For auto-size, we'll let the content determine the minimum height
+            // and then apply aspect ratio constraints if needed
+
+            // Calculate a generous base height that accounts for all elements
+            const baseHeaderHeight = showAuthorImage ? 60 * scale : 45 * scale;
+            const baseLikeCountHeight = showLikeCount ? 45 * scale : 0;
             const processedTextForHeight = processHtmlContent(
                 comment.snippet.textDisplay
             );
-            const textHeight = estimateTextHeight(
+
+            // Use a more generous text height calculation
+            const estimatedTextHeight = estimateTextHeight(
                 processedTextForHeight,
                 finalWidth,
                 fontSizes.comment,
                 padding
             );
-            finalHeight = Math.max(
-                headerHeight + textHeight + likeCountHeight + padding * 2,
-                100
+
+            // Add generous spacing and buffer
+            const spacingBuffer = 60 * scale; // Extra buffer for spacing
+            const minContentHeight = Math.max(
+                baseHeaderHeight +
+                    estimatedTextHeight +
+                    baseLikeCountHeight +
+                    padding * 2 +
+                    spacingBuffer,
+                150 * scale // Absolute minimum
             );
+
+            // Apply aspect ratio if specified, but with a minimum content height
+            if (aspectRatio && aspectRatio > 0) {
+                const aspectRatioHeight = finalWidth / aspectRatio;
+                // Always use the larger value - never crop content
+                finalHeight = Math.max(aspectRatioHeight, minContentHeight);
+            } else {
+                finalHeight = minContentHeight;
+            }
+        } else {
+            // For fixed size mode, still apply content-aware logic
+            if (aspectRatio && aspectRatio > 0) {
+                const aspectRatioHeight = width / aspectRatio;
+
+                // Calculate minimum required height for content
+                const baseHeaderHeight = showAuthorImage
+                    ? 60 * scale
+                    : 45 * scale;
+                const baseLikeCountHeight = showLikeCount ? 45 * scale : 0;
+                const processedTextForHeight = processHtmlContent(
+                    comment.snippet.textDisplay
+                );
+                const estimatedTextHeight = estimateTextHeight(
+                    processedTextForHeight,
+                    width,
+                    fontSize,
+                    padding
+                );
+                const spacingBuffer = 60 * scale;
+                const minContentHeight = Math.max(
+                    baseHeaderHeight +
+                        estimatedTextHeight +
+                        baseLikeCountHeight +
+                        padding * 2 +
+                        spacingBuffer,
+                    150 * scale
+                );
+
+                // Use the larger of aspect ratio height or content required height
+                finalHeight = Math.max(aspectRatioHeight, minContentHeight);
+                finalWidth = width;
+            }
         }
 
         finalWidth = Math.round(finalWidth);
@@ -184,7 +250,6 @@ export async function GET(req: NextRequest) {
         });
 
         const decodedText = processHtmlContent(comment.snippet.textDisplay);
-
         return new ImageResponse(
             (
                 <div style={cardStyle}>
@@ -192,20 +257,21 @@ export async function GET(req: NextRequest) {
                         style={{
                             display: "flex",
                             flexDirection: "column",
-                            height: "100%",
-                            justifyContent:
-                                verticalAlign === "start"
-                                    ? "flex-start"
-                                    : verticalAlign === "end"
-                                    ? "flex-end"
-                                    : "center",
+                            minHeight: "100%",
+                            height: "auto",
+                            justifyContent: "flex-start",
+                            gap: `${12 * scale}px`,
                         }}
                     >
+                        {/* Header Section - Author info */}
                         <div
                             style={{
                                 display: "flex",
                                 alignItems: "center",
-                                marginBottom: "12px",
+                                flexShrink: 0,
+                                minHeight: `${
+                                    showAuthorImage ? 40 * scale : 24 * scale
+                                }px`,
                             }}
                         >
                             {showAuthorImage && (
@@ -216,7 +282,8 @@ export async function GET(req: NextRequest) {
                                         width: "40px",
                                         height: "40px",
                                         borderRadius: "50%",
-                                        marginRight: "12px",
+                                        marginRight: `${12 * scale}px`,
+                                        flexShrink: 0,
                                     }}
                                 />
                             )}
@@ -224,6 +291,7 @@ export async function GET(req: NextRequest) {
                                 style={{
                                     display: "flex",
                                     flexDirection: "column",
+                                    gap: `${4 * scale}px`,
                                 }}
                             >
                                 <div
@@ -231,6 +299,7 @@ export async function GET(req: NextRequest) {
                                         fontWeight: "bold",
                                         fontSize: `${fontSizes.authorName}px`,
                                         color: textColor,
+                                        lineHeight: 1.2,
                                     }}
                                 >
                                     {comment.snippet.authorDisplayName}
@@ -238,7 +307,8 @@ export async function GET(req: NextRequest) {
                                 <div
                                     style={{
                                         color: "#666",
-                                        fontSize: `${fontSizes.date}px`,
+                                        fontSize: `${14 * scale}px`,
+                                        lineHeight: 1.2,
                                     }}
                                 >
                                     {formatDate(
@@ -248,25 +318,31 @@ export async function GET(req: NextRequest) {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Content Section - Comment text */}
                         <div
                             style={{
-                                fontSize: `${fontSizes.comment}px`,
-                                lineHeight: "1.5",
-                                display: "flex",
+                                fontSize,
+                                lineHeight: 1.5,
                                 color: textColor,
                                 fontWeight: "bold",
-                                textAlign: "left",
                                 whiteSpace: "pre-line",
+                                wordWrap: "break-word",
+                                flex: "1 1 auto",
+                                minHeight: "0",
                             }}
                         >
                             {renderTextWithLineBreaks(decodedText)}
                         </div>
+
+                        {/* Footer Section - Like count */}
                         {showLikeCount && (
                             <div
                                 style={{
                                     display: "flex",
                                     alignItems: "center",
-                                    marginTop: "12px",
+                                    flexShrink: 0,
+                                    minHeight: `${20 * scale}px`,
                                 }}
                             >
                                 <div
@@ -274,6 +350,8 @@ export async function GET(req: NextRequest) {
                                         color: "#666",
                                         fontSize: `${fontSizes.likeCount}px`,
                                         display: "flex",
+                                        alignItems: "center",
+                                        lineHeight: 1.2,
                                     }}
                                 >
                                     👍 {comment.snippet.likeCount} likes
