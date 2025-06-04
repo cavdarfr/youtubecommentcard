@@ -23,6 +23,10 @@ export default function Home() {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [currentCommentData, setCurrentCommentData] =
         useState<CommentData | null>(null);
+    const [imageSize, setImageSize] = useState<{
+        width: number;
+        height: number;
+    } | null>(null);
     const cardOptions = useCardStore((state) => state.cardOptions);
 
     const generatePreviewUrl = useCallback(
@@ -55,6 +59,7 @@ export default function Home() {
         if (currentCommentData) {
             const newPreviewUrl = generatePreviewUrl(currentCommentData);
             setPreviewUrl(newPreviewUrl);
+            setImageSize(null);
         }
     }, [cardOptions, currentCommentData, generatePreviewUrl]);
 
@@ -63,6 +68,7 @@ export default function Home() {
             setLoading(true);
             setError(null);
             setPreviewUrl(null);
+            setImageSize(null);
 
             const commentId = extractCommentId(url);
             if (!commentId) {
@@ -87,6 +93,7 @@ export default function Home() {
 
             setCurrentCommentData(commentData);
             setPreviewUrl(generatePreviewUrl(commentData));
+            setImageSize(null);
         } catch (err) {
             console.error("Error fetching comment:", err);
             setError(err instanceof Error ? err.message : "An error occurred");
@@ -157,13 +164,28 @@ export default function Home() {
                                         <div className="text-center mb-4 font-medium">
                                             Preview
                                         </div>
-                                        <div className="relative w-full aspect-[3/2]">
+                                        <div
+                                            className="relative overflow-auto"
+                                            style={
+                                                imageSize
+                                                    ? {
+                                                          width: `${imageSize.width}px`,
+                                                          height: `${imageSize.height}px`,
+                                                      }
+                                                    : undefined
+                                            }
+                                        >
                                             <Image
                                                 src={previewUrl}
                                                 alt="Comment Card Preview"
-                                                className="w-full h-full object-contain"
-                                                width={600}
-                                                height={400}
+                                                onLoadingComplete={(img) =>
+                                                    setImageSize({
+                                                        width: img.naturalWidth,
+                                                        height: img.naturalHeight,
+                                                    })
+                                                }
+                                                width={imageSize?.width ?? 600}
+                                                height={imageSize?.height ?? 400}
                                             />
                                         </div>
                                     </div>
