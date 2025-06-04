@@ -100,8 +100,8 @@ export async function GET(req: NextRequest) {
             0
         );
         const autoSize = searchParams.get("autoSize") === "1";
-        const width = getNumberParam(searchParams.get("width"), 600);
-        const height = getNumberParam(searchParams.get("height"), 200);
+        const baseWidth = getNumberParam(searchParams.get("width"), 600);
+        const baseHeight = getNumberParam(searchParams.get("height"), 400);
         const backgroundColor = searchParams.get("backgroundColor") || "#fff";
         const showAuthorImage = searchParams.get("showAuthorImage") !== "0";
         const cardRadius = getNumberParam(searchParams.get("cardRadius"), 8);

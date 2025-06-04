@@ -23,9 +23,9 @@ interface CardStore {
 export const useCardStore = create<CardStore>((set) => ({
     cardOptions: {
         autoSize: true,
-        width: 400,
-        height: 200,
-        fontSize: 0,
+        width: 600,
+        height: 400,
+        scale: 1,
         verticalAlign: "start",
         padding: 20,
         showAuthorImage: true,
