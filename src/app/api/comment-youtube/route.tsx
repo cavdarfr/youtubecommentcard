@@ -113,10 +113,14 @@ export async function GET(req: NextRequest) {
         }
         const comment = JSON.parse(commentData);
         // Get params with defaults
-        const fontSizeAdjustment = getNumberParam(
-            searchParams.get("fontSize"),
-            0
-        );
+        const scale = getNumberParam(searchParams.get("scaleFactor"), 2);
+        const baseFontSize = getNumberParam(searchParams.get("fontSize"), 16);
+        const fontSize = baseFontSize * scale;
+        const fontSizes = {
+            comment: fontSize,
+            authorName: Math.round(fontSize * 1.1),
+            likeCount: Math.round(fontSize * 0.875),
+        };
         const autoSize = searchParams.get("autoSize") === "1";
         const baseWidth = getNumberParam(searchParams.get("width"), 600);
         const baseHeight = getNumberParam(searchParams.get("height"), 400);
@@ -124,10 +128,13 @@ export async function GET(req: NextRequest) {
             getNumberParam(searchParams.get("aspectRatio"), 0) || undefined;
         const backgroundColor = searchParams.get("backgroundColor") || "#fff";
         const showAuthorImage = searchParams.get("showAuthorImage") !== "0";
-        const cardRadius = getNumberParam(searchParams.get("cardRadius"), 8);
+        const baseCardRadius = getNumberParam(
+            searchParams.get("cardRadius"),
+            8
+        );
         const textColor = searchParams.get("textColor") || "#000";
         const showLikeCount = searchParams.get("showLikeCount") !== "0";
-        const padding = getNumberParam(searchParams.get("padding"), 20);
+        const basePadding = getNumberParam(searchParams.get("padding"), 20);
         const dateFormat = searchParams.get("dateFormat") || "us";
         let verticalAlign = searchParams.get("verticalAlign") || "center";
         if (!["start", "center", "end"].includes(verticalAlign)) {
@@ -139,7 +146,6 @@ export async function GET(req: NextRequest) {
         const height = baseHeight * scale;
 
         const cardRadius = baseCardRadius * scale;
-        const fontSize = baseFontSize * scale;
         const padding = basePadding * scale;
 
         // Guard: width and height must be valid positive integers if not autoSize
@@ -241,7 +247,7 @@ export async function GET(req: NextRequest) {
             textColor,
             fontFamily: "system-ui, Arial, sans-serif",
             fontWeight: "bold",
-            fontSize: fontSizes.comment,
+            fontSize: fontSize,
             padding,
             borderRadius: cardRadius,
             width: finalWidth,
