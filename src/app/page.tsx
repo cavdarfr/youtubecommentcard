@@ -37,7 +37,7 @@ export default function Home() {
                 padding: cardOptions.padding.toString(),
                 verticalAlign: cardOptions.verticalAlign,
                 autoSize: cardOptions.autoSize ? "1" : "0",
-                scale: cardOptions.scale.toString(),
+                fontSize: cardOptions.fontSize.toString(),
                 dateFormat: cardOptions.dateFormat,
             });
 
@@ -136,7 +136,7 @@ export default function Home() {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
+            <main className="flex-1 container mx-auto px-4 py-4 md:py-8">
                 <div className="max-w-5xl mx-auto">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4">

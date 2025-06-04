@@ -4,11 +4,13 @@ import { cn } from "@/lib/utils";
 interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label: string;
     error?: string;
+    infoIcon?: React.ReactNode;
 }
 
 export function FormInput({
     label,
     error,
+    infoIcon,
     className,
     ...props
 }: FormInputProps) {
@@ -18,7 +20,10 @@ export function FormInput({
                 htmlFor={props.id}
                 className="block text-sm font-medium mb-2"
             >
-                {label}
+                <div className="flex items-center gap-2">
+                    {label}
+                    {infoIcon}
+                </div>
             </label>
             <input
                 className={cn(

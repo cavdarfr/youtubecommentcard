@@ -95,32 +95,40 @@ export async function GET(req: NextRequest) {
         }
         const comment = JSON.parse(commentData);
         // Get params with defaults
-        const scale = getNumberParam(searchParams.get("scale"), 1);
+        const fontSizeAdjustment = getNumberParam(
+            searchParams.get("fontSize"),
+            0
+        );
         const autoSize = searchParams.get("autoSize") === "1";
-        const baseWidth = getNumberParam(searchParams.get("width"), 600);
-        const baseHeight = getNumberParam(searchParams.get("height"), 200);
+        const width = getNumberParam(searchParams.get("width"), 600);
+        const height = getNumberParam(searchParams.get("height"), 200);
         const backgroundColor = searchParams.get("backgroundColor") || "#fff";
         const showAuthorImage = searchParams.get("showAuthorImage") !== "0";
-        const baseCardRadius = getNumberParam(
-            searchParams.get("cardRadius"),
-            8
-        );
+        const cardRadius = getNumberParam(searchParams.get("cardRadius"), 8);
         const textColor = searchParams.get("textColor") || "#000";
         const showLikeCount = searchParams.get("showLikeCount") !== "0";
-        const baseFontSize = 16; // Base font size
-        const basePadding = getNumberParam(searchParams.get("padding"), 20);
+        const padding = getNumberParam(searchParams.get("padding"), 20);
         const dateFormat = searchParams.get("dateFormat") || "us";
         let verticalAlign = searchParams.get("verticalAlign") || "center";
         if (!["start", "center", "end"].includes(verticalAlign)) {
             verticalAlign = "center";
         }
 
-        // Apply scale to all size-related properties
-        const width = baseWidth * scale;
-        const height = baseHeight * scale;
-        const cardRadius = baseCardRadius * scale;
-        const fontSize = baseFontSize * scale;
-        const padding = basePadding * scale;
+        // Base font sizes
+        const baseFontSizes = {
+            authorName: 16,
+            date: 14,
+            comment: 17,
+            likeCount: 14,
+        };
+
+        // Apply font size adjustment to all text elements
+        const fontSizes = {
+            authorName: baseFontSizes.authorName + fontSizeAdjustment,
+            date: baseFontSizes.date + fontSizeAdjustment,
+            comment: baseFontSizes.comment + fontSizeAdjustment,
+            likeCount: baseFontSizes.likeCount + fontSizeAdjustment,
+        };
 
         // Guard: width and height must be valid positive integers if not autoSize
         if (
@@ -141,20 +149,20 @@ export async function GET(req: NextRequest) {
             finalWidth = Math.max(width, 400);
 
             // Estimate header and like count heights
-            const headerHeight = (40 + 12) * scale; // avatar + margin
-            const likeCountHeight = showLikeCount ? 26 * scale : 0;
+            const headerHeight = 40 + 12; // avatar + margin
+            const likeCountHeight = showLikeCount ? 26 : 0;
             const processedTextForHeight = processHtmlContent(
                 comment.snippet.textDisplay
             );
             const textHeight = estimateTextHeight(
                 processedTextForHeight,
                 finalWidth,
-                fontSize,
+                fontSizes.comment,
                 padding
             );
             finalHeight = Math.max(
                 headerHeight + textHeight + likeCountHeight + padding * 2,
-                100 * scale
+                100
             );
         }
 
@@ -167,7 +175,7 @@ export async function GET(req: NextRequest) {
             textColor,
             fontFamily: "system-ui, Arial, sans-serif",
             fontWeight: "bold",
-            fontSize,
+            fontSize: fontSizes.comment,
             padding,
             borderRadius: cardRadius,
             width: finalWidth,
@@ -197,7 +205,7 @@ export async function GET(req: NextRequest) {
                             style={{
                                 display: "flex",
                                 alignItems: "center",
-                                marginBottom: `${12 * scale}px`,
+                                marginBottom: "12px",
                             }}
                         >
                             {showAuthorImage && (
@@ -205,10 +213,10 @@ export async function GET(req: NextRequest) {
                                     src={comment.snippet.authorProfileImageUrl}
                                     alt={comment.snippet.authorDisplayName}
                                     style={{
-                                        width: `${40 * scale}px`,
-                                        height: `${40 * scale}px`,
+                                        width: "40px",
+                                        height: "40px",
                                         borderRadius: "50%",
-                                        marginRight: `${12 * scale}px`,
+                                        marginRight: "12px",
                                     }}
                                 />
                             )}
@@ -221,7 +229,7 @@ export async function GET(req: NextRequest) {
                                 <div
                                     style={{
                                         fontWeight: "bold",
-                                        fontSize: `${16 * scale}px`,
+                                        fontSize: `${fontSizes.authorName}px`,
                                         color: textColor,
                                     }}
                                 >
@@ -230,7 +238,7 @@ export async function GET(req: NextRequest) {
                                 <div
                                     style={{
                                         color: "#666",
-                                        fontSize: `${14 * scale}px`,
+                                        fontSize: `${fontSizes.date}px`,
                                     }}
                                 >
                                     {formatDate(
@@ -242,7 +250,7 @@ export async function GET(req: NextRequest) {
                         </div>
                         <div
                             style={{
-                                fontSize,
+                                fontSize: `${fontSizes.comment}px`,
                                 lineHeight: "1.5",
                                 display: "flex",
                                 color: textColor,
@@ -258,13 +266,13 @@ export async function GET(req: NextRequest) {
                                 style={{
                                     display: "flex",
                                     alignItems: "center",
-                                    marginTop: `${12 * scale}px`,
+                                    marginTop: "12px",
                                 }}
                             >
                                 <div
                                     style={{
                                         color: "#666",
-                                        fontSize: `${14 * scale}px`,
+                                        fontSize: `${fontSizes.likeCount}px`,
                                         display: "flex",
                                     }}
                                 >

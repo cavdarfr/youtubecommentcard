@@ -4,7 +4,7 @@ export interface CardOptions {
     autoSize: boolean;
     width: number;
     height: number;
-    scale: number;
+    fontSize: number;
     verticalAlign: string;
     padding: number;
     showAuthorImage: boolean;
@@ -25,7 +25,7 @@ export const useCardStore = create<CardStore>((set) => ({
         autoSize: true,
         width: 400,
         height: 200,
-        scale: 1,
+        fontSize: 0,
         verticalAlign: "start",
         padding: 20,
         showAuthorImage: true,

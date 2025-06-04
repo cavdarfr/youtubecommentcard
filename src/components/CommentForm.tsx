@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FormInput, FormCheckbox, FormSelect } from "./ui/form";
 import { Button } from "./ui/button";
 import { useCardStore } from "@/lib/store";
+import { TutorialDialog } from "./TutorialDialog";
 
 interface CommentFormProps {
     onSubmit: (url: string) => Promise<void>;
@@ -11,7 +12,9 @@ interface CommentFormProps {
 }
 
 export function CommentForm({ onSubmit, loading }: CommentFormProps) {
-    const [url, setUrl] = useState("");
+    const [url, setUrl] = useState(
+        "https://www.youtube.com/watch?v=zcjppaYpH-Y&lc=Ugx90rGY_MjYdvHhAUZ4AaABAg"
+    );
     const { cardOptions, setCardOptions } = useCardStore();
 
     const handleFetchComment = async (e: React.FormEvent) => {
@@ -26,8 +29,8 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
     ];
 
     const dateFormatOptions = [
-        { value: "us", label: "US Format (MM/DD/YYYY)" },
         { value: "fr", label: "French Format (DD/MM/YYYY)" },
+        { value: "us", label: "US Format (MM/DD/YYYY)" },
     ];
 
     return (
@@ -39,6 +42,27 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="Enter YouTube comment URL"
+                    infoIcon={
+                        <TutorialDialog>
+                            <button
+                                type="button"
+                                className="inline-flex items-center justify-center w-4 h-4 text-blue-600 hover:text-blue-800 focus:outline-none"
+                                aria-label="How to get YouTube comment URL"
+                            >
+                                <svg
+                                    className="w-4 h-4"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                >
+                                    <path
+                                        fillRule="evenodd"
+                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                        clipRule="evenodd"
+                                    />
+                                </svg>
+                            </button>
+                        </TutorialDialog>
+                    }
                 />
 
                 <div className="space-y-4">
@@ -113,20 +137,20 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
                     </div>
 
                     <FormInput
-                        id="scale"
-                        label={`Scale (${Math.round(
-                            cardOptions.scale * 100
-                        )}%)`}
+                        id="fontSize"
+                        label={`Font Size Adjustment (${
+                            cardOptions.fontSize >= 0 ? "+" : ""
+                        }${cardOptions.fontSize}px)`}
                         type="range"
-                        value={cardOptions.scale}
+                        value={cardOptions.fontSize}
                         onChange={(e) =>
                             setCardOptions({
-                                scale: Number(e.target.value),
+                                fontSize: Number(e.target.value),
                             })
                         }
-                        min="0.5"
-                        max="1.5"
-                        step="0.1"
+                        min="-5"
+                        max="10"
+                        step="1"
                     />
 
                     <div className="grid grid-cols-2 gap-4">
