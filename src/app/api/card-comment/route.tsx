@@ -8,6 +8,7 @@ const CARD_SIZES = {
     small: 400,
     medium: 600,
     large: 800,
+    xlarge: 1000,
 } as const;
 
 type CardSize = keyof typeof CARD_SIZES;
@@ -63,30 +64,46 @@ function calculateHeight(
     fontSize: number,
     padding: number,
     showAuthorImage: boolean,
-    showLikeCount: boolean
+    showLikeCount: boolean,
+    lineHeight: number = 1.5
 ): number {
-    // Estimate text dimensions more accurately
-    const avgCharWidth = fontSize * 0.55;
+    // Calculate available width for text
     const availableWidth = width - padding * 2;
-    const charsPerLine = Math.floor(availableWidth / avgCharWidth);
+    const avgCharWidth = fontSize * 0.55;
+    const charsPerLine = Math.max(1, Math.floor(availableWidth / avgCharWidth));
 
-    const totalLines = text.split("\n").reduce((lines, line) => {
-        return (
-            lines +
-            (line.trim().length === 0
-                ? 1
-                : Math.max(1, Math.ceil(line.length / charsPerLine)))
-        );
-    }, 0);
+    // Split text into lines and count wrapped lines
+    const lines = text.split("\n");
+    let totalLines = 0;
+    for (const line of lines) {
+        if (line.trim().length === 0) {
+            totalLines += 1;
+        } else {
+            totalLines += Math.max(1, Math.ceil(line.length / charsPerLine));
+        }
+    }
 
-    const textHeight = totalLines * fontSize * 1.5;
-    const headerHeight = showAuthorImage ? 52 : 36; // Reduced from 60/45
-    const likeCountHeight = showLikeCount ? 20 : 0; // Reduced from 35
-    const spacing = showLikeCount ? 24 : 12; // Reduced spacing, conditional
+    // Calculate text height
+    const textHeight = totalLines * fontSize * lineHeight;
+    // Header height (author info)
+    const headerHeight = showAuthorImage
+        ? 52 * (fontSize / 16)
+        : 40 * (fontSize / 16);
+    // Footer height (like count)
+    const footerHeight = showLikeCount ? 32 * (fontSize / 16) : 0;
+    // Add a buffer for spacing
+    const spacingBuffer = 24 * (fontSize / 16);
 
-    return Math.max(
-        150, // Reduced minimum height
-        textHeight + headerHeight + likeCountHeight + spacing + padding * 2
+    // Total height
+    return Math.ceil(
+        Math.max(
+            150 * (fontSize / 16),
+            textHeight +
+                headerHeight +
+                footerHeight +
+                padding * 2 +
+                spacingBuffer
+        )
     );
 }
 
@@ -101,24 +118,35 @@ export async function GET(req: NextRequest) {
 
         const comment = JSON.parse(commentData);
 
-        // Get parameters with simplified defaults
+        // Get parameters with enhanced defaults
         const size = (searchParams.get("size") as CardSize) || "medium";
-        const width = CARD_SIZES[size] || CARD_SIZES.medium;
+        const scaleFactor = getNumberParam(searchParams.get("scaleFactor"), 2);
+        const baseWidth = CARD_SIZES[size] || CARD_SIZES.medium;
         const backgroundColor =
             searchParams.get("backgroundColor") || "#ffffff";
         const textColor = searchParams.get("textColor") || "#000000";
         const showAuthorImage = searchParams.get("showAuthorImage") !== "0";
         const showLikeCount = searchParams.get("showLikeCount") !== "0";
-        const cardRadius = getNumberParam(searchParams.get("cardRadius"), 12);
-        const padding = getNumberParam(searchParams.get("padding"), 24);
+        const baseCardRadius = getNumberParam(
+            searchParams.get("cardRadius"),
+            12
+        );
+        const basePadding = getNumberParam(searchParams.get("padding"), 24);
         const dateFormat = searchParams.get("dateFormat") || "us";
+        const fontSize = getNumberParam(searchParams.get("fontSize"), 16);
+
+        // Apply scale to all size-related properties
+        const width = baseWidth * scaleFactor;
+        const padding = basePadding * scaleFactor;
+        const cardRadius = baseCardRadius * scaleFactor;
+        const scaledFontSize = fontSize * scaleFactor;
 
         // Process text and calculate dimensions
         const processedText = processHtmlContent(comment.snippet.textDisplay);
         const height = calculateHeight(
             processedText,
             width,
-            16,
+            scaledFontSize,
             padding,
             showAuthorImage,
             showLikeCount
@@ -133,7 +161,7 @@ export async function GET(req: NextRequest) {
                         backgroundColor,
                         color: textColor,
                         fontFamily: "system-ui, sans-serif",
-                        fontSize: 16,
+                        fontSize: scaledFontSize,
                         lineHeight: 1.5,
                         padding: padding,
                         borderRadius: cardRadius,
@@ -149,18 +177,18 @@ export async function GET(req: NextRequest) {
                             style={{
                                 display: "flex",
                                 alignItems: "center",
-                                marginBottom: 12,
+                                marginBottom: 12 * scaleFactor,
                             }}
                         >
                             {showAuthorImage && (
                                 <img
                                     src={comment.snippet.authorProfileImageUrl}
                                     alt=""
-                                    width="40"
-                                    height="40"
+                                    width={40 * scaleFactor}
+                                    height={40 * scaleFactor}
                                     style={{
                                         borderRadius: "50%",
-                                        marginRight: 12,
+                                        marginRight: 12 * scaleFactor,
                                     }}
                                 />
                             )}
@@ -173,13 +201,20 @@ export async function GET(req: NextRequest) {
                                 <div
                                     style={{
                                         fontWeight: 600,
-                                        fontSize: 16,
-                                        marginBottom: 2,
+                                        fontSize: scaledFontSize,
+                                        marginBottom: 2 * scaleFactor,
                                     }}
                                 >
                                     {comment.snippet.authorDisplayName}
                                 </div>
-                                <div style={{ color: "#666", fontSize: 14 }}>
+                                <div
+                                    style={{
+                                        color: "#666",
+                                        fontSize: Math.round(
+                                            scaledFontSize * 0.875
+                                        ),
+                                    }}
+                                >
                                     {formatDate(
                                         comment.snippet.publishedAt,
                                         dateFormat
@@ -207,8 +242,8 @@ export async function GET(req: NextRequest) {
                                 display: "flex",
                                 alignItems: "center",
                                 color: "#666",
-                                fontSize: 14,
-                                marginTop: 6,
+                                fontSize: Math.round(scaledFontSize * 0.875),
+                                marginTop: 6 * scaleFactor,
                             }}
                         >
                             👍 {comment.snippet.likeCount} likes

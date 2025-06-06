@@ -19,9 +19,9 @@ export default function HomePage() {
                             <h1 className="text-xl font-bold">
                                 YouTube Comment Card
                             </h1>
-                            <span className="text-xs text-gray-600 font-normal">
+                            {/* <span className="text-xs text-gray-600 font-normal">
                                 Enhanced with Puppeteer ✨
-                            </span>
+                            </span> */}
                         </div>
                     </div>
                 </div>
@@ -29,7 +29,7 @@ export default function HomePage() {
 
             {/* Main Content */}
             <main className="flex-1 container mx-auto px-4 py-4 md:py-8">
-                <div className="max-w-5xl mx-auto">
+                <div className="max-w-7xl mx-auto">
                     <CommentCardGenerator />
                 </div>
             </main>

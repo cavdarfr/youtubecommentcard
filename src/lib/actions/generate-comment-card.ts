@@ -75,7 +75,7 @@ export async function generateCommentCard(
             _t: Date.now().toString(), // Cache busting parameter
         });
 
-        const previewUrl = `/api/card-comment-puppeteer-advanced?${params.toString()}`;
+        const previewUrl = `/api/card-comment?${params.toString()}`;
 
         return { previewUrl };
     } catch (error) {
