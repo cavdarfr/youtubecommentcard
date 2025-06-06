@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CommentForm } from "./CommentForm";
 import { CommentPreview } from "./CommentPreview";
 import { generateCommentCard } from "@/lib/actions/generate-comment-card";
+import { AlertTriangle } from "lucide-react";
 
 export function CommentCardGenerator() {
     const [loading, setLoading] = useState(false);
@@ -68,7 +69,27 @@ export function CommentCardGenerator() {
 
             <div className="relative flex flex-1 flex-col gap-4 p-4 md:p-8 bg-amber-200/20 rounded-lg">
                 {error ? (
-                    <div className="text-red-500 text-center">{error}</div>
+                    error.includes("Daily usage limit reached") ? (
+                        <div className="flex flex-col items-center justify-center bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 text-center">
+                            <AlertTriangle className="w-8 h-8 mb-2" />
+                            <div className="font-semibold mb-1">
+                                Daily Usage Limit Reached
+                            </div>
+                            <div className="text-sm">
+                                You have reached the daily usage limit for the
+                                YouTube API.
+                                <br />
+                                Please try again tomorrow.
+                                <br />
+                                <span className="text-xs text-yellow-700">
+                                    This is to prevent abuse and keep the
+                                    service free for everyone.
+                                </span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-red-500 text-center">{error}</div>
+                    )
                 ) : previewUrl ? (
                     <CommentPreview
                         key={previewUrl} // Force re-mount when URL changes

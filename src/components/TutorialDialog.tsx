@@ -44,9 +44,10 @@ export function TutorialDialog({ children }: TutorialDialogProps) {
                                 3
                             </span>
                             <p>
-                                <strong>Click on the timestamp</strong> of the
-                                comment (e.g., &quot;il y a 1 heure&quot;,
-                                &quot;2 hours ago&quot;, &quot;1 day ago&quot;)
+                                On the comment section of a YouTube video, next
+                                to the name of the author of the comment, there
+                                is a timestamp. Click on it and copy the new URL
+                                from the address bar.
                             </p>
                         </div>
                         <div className="flex items-start gap-3">

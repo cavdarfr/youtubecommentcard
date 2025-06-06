@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-    label: string;
+    label: React.ReactNode;
     error?: string;
     infoIcon?: React.ReactNode;
 }

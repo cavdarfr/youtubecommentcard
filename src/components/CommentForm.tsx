@@ -6,6 +6,8 @@ import { Button } from "./ui/button";
 import { useCardStore } from "@/lib/store";
 import type { CardSize } from "@/lib/store";
 import { memo } from "react";
+import { Info } from "lucide-react";
+import { TutorialDialog } from "./TutorialDialog";
 
 interface CommentFormProps {
     onSubmit: (formData: FormData) => Promise<void>;
@@ -121,7 +123,20 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
                     render={({ field }) => (
                         <MemoizedFormInput
                             id="url"
-                            label="YouTube Comment URL"
+                            label={
+                                <span className="flex items-center gap-1">
+                                    YouTube Comment URL
+                                    <TutorialDialog>
+                                        <button
+                                            type="button"
+                                            aria-label="How to get the right URL"
+                                            className="ml-1 text-blue-600 hover:text-blue-800 focus:outline-none"
+                                        >
+                                            <Info size={16} />
+                                        </button>
+                                    </TutorialDialog>
+                                </span>
+                            }
                             value={field.value}
                             onChange={field.onChange}
                             placeholder="Enter YouTube comment URL"
@@ -163,6 +178,7 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
                                 />
                             )}
                         />
+
                         <Controller
                             name="padding"
                             control={control}
@@ -198,6 +214,7 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
                                 />
                             )}
                         />
+
                         <Controller
                             name="textColor"
                             control={control}
@@ -233,6 +250,7 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
                                 />
                             )}
                         />
+
                         <Controller
                             name="scaleFactor"
                             control={control}
@@ -277,6 +295,7 @@ export function CommentForm({ onSubmit, loading }: CommentFormProps) {
                                 />
                             )}
                         />
+
                         <Controller
                             name="showLikeCount"
                             control={control}

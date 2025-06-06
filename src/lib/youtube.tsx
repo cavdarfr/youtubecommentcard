@@ -1,4 +1,5 @@
 import { youtube } from "@googleapis/youtube";
+import { checkAndIncrementQuota, resetQuotaIfNeeded } from "./youtube-quota";
 
 const client = youtube({
     auth: process.env.YOUTUBE_API_KEY,
@@ -18,6 +19,15 @@ export class YouTubeAPIError extends Error {
 
 export const getYoutubeComments = async (commentId: string) => {
     try {
+        await resetQuotaIfNeeded();
+        try {
+            await checkAndIncrementQuota();
+        } catch {
+            throw new YouTubeAPIError(
+                "Daily usage limit reached. Please try again tomorrow. (API quota for YouTube exceeded)",
+                429
+            );
+        }
         const response = await client.comments.list({
             part: ["snippet"],
             id: [commentId],
