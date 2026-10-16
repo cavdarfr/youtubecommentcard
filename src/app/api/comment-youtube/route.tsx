@@ -113,7 +113,14 @@ export async function GET(req: NextRequest) {
         }
         const comment = JSON.parse(commentData);
         // Get params with defaults
-        const scale = getNumberParam(searchParams.get("scale"), 1);
+        const scale = getNumberParam(searchParams.get("scaleFactor"), 2);
+        const baseFontSize = getNumberParam(searchParams.get("fontSize"), 16);
+        const fontSize = baseFontSize * scale;
+        const fontSizes = {
+            comment: fontSize,
+            authorName: Math.round(fontSize * 1.1),
+            likeCount: Math.round(fontSize * 0.875),
+        };
         const autoSize = searchParams.get("autoSize") === "1";
         const baseWidth = getNumberParam(searchParams.get("width"), 600);
         const baseHeight = getNumberParam(searchParams.get("height"), 400);
@@ -127,7 +134,6 @@ export async function GET(req: NextRequest) {
         );
         const textColor = searchParams.get("textColor") || "#000";
         const showLikeCount = searchParams.get("showLikeCount") !== "0";
-        const baseFontSize = 16; // Base font size
         const basePadding = getNumberParam(searchParams.get("padding"), 20);
         const dateFormat = searchParams.get("dateFormat") || "us";
         let verticalAlign = searchParams.get("verticalAlign") || "center";
@@ -140,7 +146,6 @@ export async function GET(req: NextRequest) {
         const height = baseHeight * scale;
 
         const cardRadius = baseCardRadius * scale;
-        const fontSize = baseFontSize * scale;
         const padding = basePadding * scale;
 
         // Guard: width and height must be valid positive integers if not autoSize
@@ -175,7 +180,7 @@ export async function GET(req: NextRequest) {
             const estimatedTextHeight = estimateTextHeight(
                 processedTextForHeight,
                 finalWidth,
-                fontSize,
+                fontSizes.comment,
                 padding
             );
 
@@ -242,7 +247,7 @@ export async function GET(req: NextRequest) {
             textColor,
             fontFamily: "system-ui, Arial, sans-serif",
             fontWeight: "bold",
-            fontSize,
+            fontSize: fontSize,
             padding,
             borderRadius: cardRadius,
             width: finalWidth,
@@ -280,8 +285,8 @@ export async function GET(req: NextRequest) {
                                     src={comment.snippet.authorProfileImageUrl}
                                     alt={comment.snippet.authorDisplayName}
                                     style={{
-                                        width: `${40 * scale}px`,
-                                        height: `${40 * scale}px`,
+                                        width: "40px",
+                                        height: "40px",
                                         borderRadius: "50%",
                                         marginRight: `${12 * scale}px`,
                                         flexShrink: 0,
@@ -298,7 +303,7 @@ export async function GET(req: NextRequest) {
                                 <div
                                     style={{
                                         fontWeight: "bold",
-                                        fontSize: `${16 * scale}px`,
+                                        fontSize: `${fontSizes.authorName}px`,
                                         color: textColor,
                                         lineHeight: 1.2,
                                     }}
@@ -349,7 +354,7 @@ export async function GET(req: NextRequest) {
                                 <div
                                     style={{
                                         color: "#666",
-                                        fontSize: `${14 * scale}px`,
+                                        fontSize: `${fontSizes.likeCount}px`,
                                         display: "flex",
                                         alignItems: "center",
                                         lineHeight: 1.2,

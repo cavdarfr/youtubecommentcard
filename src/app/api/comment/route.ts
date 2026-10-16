@@ -13,21 +13,23 @@ export async function GET(request: Request) {
                 { status: 400 }
             );
         }
-    
         // Fetch the comment
         const response = await getYoutubeComments(commentId);
 
         return NextResponse.json(response);
     } catch (error) {
-        console.error("Error fetching comment:", error);
-
         if (error instanceof YouTubeAPIError) {
+            if (error.statusCode === 429) {
+                console.warn("Quota limit reached:", error.message);
+            } else {
+                console.error("YouTubeAPIError:", error.message);
+            }
             return NextResponse.json(
                 { error: error.message },
                 { status: error.statusCode || 500 }
             );
         }
-
+        console.error("Unexpected error fetching comment:", error);
         return NextResponse.json(
             { error: "Failed to fetch comment" },
             { status: 500 }
